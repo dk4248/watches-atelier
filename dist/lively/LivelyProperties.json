@@ -1,0 +1,62 @@
+{
+  "watch": {
+    "type": "dropdown",
+    "value": 0,
+    "text": "Watch of the day",
+    "items": [
+      "NOMOS Glashütte Tangente 35",
+      "Grand Seiko Snowflake",
+      "NOMOS Glashütte Tangente Update",
+      "Tudor Black Bay Pro"
+    ]
+  },
+  "view": {
+    "type": "dropdown",
+    "value": 0,
+    "text": "Wallpaper view",
+    "items": [
+      "Cinematic loop",
+      "Dial",
+      "Movement",
+      "Exploded"
+    ]
+  },
+  "idle": {
+    "type": "dropdown",
+    "value": 2,
+    "text": "Back to wallpaper after",
+    "items": [
+      "30 seconds",
+      "1 minute",
+      "2 minutes",
+      "5 minutes",
+      "10 minutes",
+      "Never"
+    ]
+  },
+  "labels": {
+    "type": "checkbox",
+    "value": true,
+    "text": "Part labels"
+  },
+  "fps30": {
+    "type": "checkbox",
+    "value": false,
+    "text": "Save power (30 fps)"
+  },
+  "fps60": {
+    "type": "checkbox",
+    "value": false,
+    "text": "Keep 60 fps while idle"
+  },
+  "theme": {
+    "type": "dropdown",
+    "value": 0,
+    "text": "Background",
+    "items": [
+      "Match the watch",
+      "Light",
+      "Dark"
+    ]
+  }
+}

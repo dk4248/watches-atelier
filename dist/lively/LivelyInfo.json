@@ -1,0 +1,14 @@
+{
+  "AppVersion": "2.1.0.0",
+  "Title": "Watch Atelier — live replicas",
+  "Thumbnail": "thumbnail.jpg",
+  "Preview": null,
+  "Desc": "Real-time 3D replicas of your watches — NOMOS Glashütte Tangente 139, Grand Seiko Snowflake SBGA211, NOMOS Glashütte Tangente neomatik 38 Update 147, Tudor Black Bay Pro M79470-0004 — every gear turning in sync with your clock. Click to take control; open the leather watch box to pick the watch of the day. Unofficial fan replicas.",
+  "Author": "Watch Atelier",
+  "License": null,
+  "Contact": null,
+  "Type": 1,
+  "FileName": "index.html",
+  "Arguments": "--pause-event true",
+  "IsAbsolutePath": false
+}

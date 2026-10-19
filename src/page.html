@@ -1,0 +1,562 @@
+<title>Watch Collection</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/*FONTS*/
+/* Colour tokens. The watch on show sets data-theme on <html> (its theme.mode) and
+   overrides --bg-top, --bg-bottom, --paper, --accent… with inline custom properties
+   (ui/theme.js); these are the defaults. */
+:root {
+  --paper: #eceef1;
+  --bg-top: #eceef1;
+  --bg-bottom: #d6d9de;
+  --ink: #14171c;
+  --ink-2: #5c636d;
+  --ink-3: #8a919b;
+  --rule: rgba(20, 23, 28, .14);
+  --rule-2: rgba(20, 23, 28, .30);
+  --accent: #2347b5;
+  --accent-soft: rgba(35, 71, 181, .10);
+  --on-accent: #ffffff;
+  --veil: rgba(236, 238, 241, .74);
+  --sheet: rgba(239, 241, 244, .96);
+  --leader: rgba(20, 23, 28, .52);
+  --tip-bg: #14171c;
+  --tip-ink: #eceef1;
+  --rec: #c0392b;
+  --font-sans: 'Jost', 'Futura', 'Avenir Next', 'Century Gothic', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', 'Cascadia Mono', Consolas, Menlo, monospace;
+  /* side gutter: on super-ultrawide screens (32:9) the interface stays within the
+     central 2560 px, near the watch, instead of drifting to the far corners */
+  --side: max(16px, calc((100vw - 2560px) / 2));
+  --side-l: max(var(--side), env(safe-area-inset-left, 0px));
+  --side-r: max(var(--side), env(safe-area-inset-right, 0px));
+  /* bottom inset: Lively draws the page under the Windows taskbar, so in wallpaper
+     contexts ui/ui.js (and the boot script) set --inset-b; clickable chrome stays above */
+  --inset-b: 0px;
+  --pad-b: max(var(--inset-b), env(safe-area-inset-bottom, 0px));
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #0f1218;
+    --bg-top: #0f1218;
+    --bg-bottom: #1b2029;
+    --ink: #e7eaef;
+    --ink-2: #98a1ad;
+    --ink-3: #69717d;
+    --rule: rgba(231, 234, 239, .14);
+    --rule-2: rgba(231, 234, 239, .30);
+    --accent: #7d97ff;
+    --accent-soft: rgba(125, 151, 255, .14);
+    --on-accent: #0f1218;
+    --veil: rgba(15, 18, 24, .66);
+    --sheet: rgba(19, 23, 30, .96);
+    --leader: rgba(231, 234, 239, .50);
+    --tip-bg: #e7eaef;
+    --tip-ink: #0f1218;
+    --rec: #ff6b5e;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #0f1218;
+  --bg-top: #0f1218;
+  --bg-bottom: #1b2029;
+  --ink: #e7eaef;
+  --ink-2: #98a1ad;
+  --ink-3: #69717d;
+  --rule: rgba(231, 234, 239, .14);
+  --rule-2: rgba(231, 234, 239, .30);
+  --accent: #7d97ff;
+  --accent-soft: rgba(125, 151, 255, .14);
+  --on-accent: #0f1218;
+  --veil: rgba(15, 18, 24, .66);
+  --sheet: rgba(19, 23, 30, .96);
+  --leader: rgba(231, 234, 239, .50);
+  --tip-bg: #e7eaef;
+  --tip-ink: #0f1218;
+  --rec: #ff6b5e;
+  color-scheme: dark;
+}
+
+html, body { height: 100%; }
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-weight: 400;
+  overflow: hidden;
+  overscroll-behavior: none;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+button, input { font: inherit; color: inherit; }
+:focus { outline: none; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+[hidden] { display: none !important; }
+
+/* ---------- 3D stage ---------- */
+/* the CSS gradient matches the 3D background, so nothing flashes before the first frame */
+#stage { position: fixed; inset: 0; z-index: 0; background: linear-gradient(to bottom, var(--bg-top), var(--bg-bottom)); }
+.stage-canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+.recording .stage-canvas { object-fit: contain; }
+.nocursor, .nocursor * { cursor: none !important; }
+
+/* ---------- overlay layout ---------- */
+.ui {
+  position: fixed; inset: 0; z-index: 1;
+  display: flex; flex-direction: column; justify-content: space-between;
+  box-sizing: border-box;
+  padding: calc(14px + env(safe-area-inset-top, 0px)) var(--side-r) calc(12px + var(--pad-b)) var(--side-l);
+  pointer-events: none;
+  user-select: none; -webkit-user-select: none;
+}
+/* chrome = HUD, bottom bar, zoom buttons, panel, help: fades with the wallpaper */
+.chrome { transition: opacity .5s ease, visibility 0s linear 0s; }
+.ui.bare .chrome { opacity: 0; visibility: hidden; pointer-events: none !important; transition: opacity .8s ease, visibility 0s linear .8s; }
+.ui.bare .chrome * { pointer-events: none !important; }
+/* until the app has filled in the watch (and decided whether it is a wallpaper) */
+.ui.booting .chrome, .wp-boot .ui .chrome { opacity: 0 !important; visibility: hidden !important; transition: none !important; }
+/* the watch box is open: it owns the screen and the input */
+.ui.boxed .chrome, .ui.boxed .labels, .ui.boxed .leaders, .ui.boxed .tip, .ui.boxed .caption, .ui.boxed .hint {
+  opacity: 0 !important; visibility: hidden !important; pointer-events: none !important;
+  transition: opacity .2s ease, visibility 0s linear .2s !important;
+}
+.ui.boxed * { pointer-events: none !important; }
+.labels, .leaders { transition: opacity .3s ease; }
+
+.caps { font-weight: 500; font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; }
+.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+/* ---------- HUD ---------- */
+.top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.hud-l { min-width: 0; }
+.title { margin: 0; font-weight: 300; font-size: 40px; line-height: .95; letter-spacing: .005em; min-height: 38px; }
+.sub { margin: 9px 0 0; color: var(--ink-2); }
+.hud-r { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; text-align: right; }
+.clock { display: block; font-family: var(--font-mono); font-size: 24px; line-height: 1; letter-spacing: -.01em; font-variant-numeric: tabular-nums; }
+.pill {
+  display: inline-flex; align-items: center; gap: 7px; height: 20px; padding: 0 8px;
+  border: 1px solid var(--rule-2); border-radius: 2px; color: var(--ink-2); background: var(--veil);
+}
+.pill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--ink-3); }
+.pill[data-s="live"]::before { background: var(--accent); animation: beat 1s steps(2, jump-none) infinite; }
+.pill[data-s="slow"], .pill[data-s="fast"] { color: var(--accent); border-color: var(--accent); }
+@keyframes beat { 0% { opacity: 1; } 100% { opacity: .35; } }
+.beats { font-size: 11px; color: var(--ink-2); }
+.reserve { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; margin-top: 2px; }
+.reserve-text { font-size: 11px; color: var(--ink-2); display: flex; gap: 8px; align-items: baseline; }
+.reserve-text .mono { color: var(--ink); }
+.reserve-row { display: flex; align-items: center; gap: 10px; pointer-events: auto; }
+.gauge { position: relative; width: 132px; height: 3px; background: var(--rule); overflow: hidden; }
+.gauge i { position: absolute; inset: 0; background: var(--ink); transform-origin: 0 50%; transform: scaleX(.8); }
+.gauge::after { /* one day of reserve */ content: ""; position: absolute; top: -2px; bottom: -2px; left: var(--tick, 45%); width: 1px; background: var(--paper); }
+
+/* ---------- buttons ---------- */
+.btn {
+  appearance: none; -webkit-appearance: none; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  height: 30px; padding: 0 12px; box-sizing: border-box;
+  border: 1px solid var(--rule-2); border-radius: 2px; background: var(--veil); color: var(--ink);
+  font-size: 10.5px; font-weight: 500; letter-spacing: .09em; text-transform: uppercase; white-space: nowrap;
+  cursor: pointer; pointer-events: auto; transition: border-color .15s, color .15s, background-color .15s;
+}
+.btn:hover { border-color: var(--ink-2); }
+.btn:active { background: var(--accent-soft); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.btn.sm { height: 22px; padding: 0 8px; font-size: 9.5px; }
+.btn.busy { color: var(--accent); border-color: var(--accent); }
+.btn.icon { width: 30px; padding: 0; font-size: 13px; letter-spacing: 0; }
+.btn svg { display: block; flex: none; }
+.icon-btn {
+  appearance: none; border: 0; background: none; width: 30px; height: 30px; margin: -6px -8px 0 0;
+  font-size: 22px; font-weight: 300; line-height: 1; color: var(--ink-2); cursor: pointer; pointer-events: auto;
+}
+.icon-btn:hover { color: var(--ink); }
+
+.seg { display: inline-flex; border: 1px solid var(--rule-2); border-radius: 2px; background: var(--veil); pointer-events: auto; }
+.seg button {
+  appearance: none; position: relative; height: 28px; padding: 0 11px; border: 0; border-left: 1px solid var(--rule);
+  background: none; color: var(--ink-2); cursor: pointer; white-space: nowrap;
+  font-size: 10.5px; font-weight: 500; letter-spacing: .09em; text-transform: uppercase;
+}
+.seg button:first-child { border-left: 0; }
+.seg button:hover { color: var(--ink); }
+.seg button[aria-pressed="true"] { color: var(--accent); }
+.seg button[aria-pressed="true"]::after { content: ""; position: absolute; left: 9px; right: 9px; bottom: 4px; height: 2px; background: var(--accent); }
+.seg button.num { font-family: var(--font-mono); letter-spacing: 0; text-transform: none; font-weight: 400; }
+
+.tgl { color: var(--ink-2); }
+.tgl::before { content: ""; width: 7px; height: 7px; border: 1px solid currentColor; box-sizing: border-box; }
+.tgl[aria-pressed="true"] { color: var(--ink); }
+.tgl[aria-pressed="true"]::before { background: var(--accent); border-color: var(--accent); }
+
+input[type="range"] {
+  -webkit-appearance: none; appearance: none; width: 132px; height: 28px; margin: 0; padding: 0;
+  background: none; cursor: pointer; pointer-events: auto; touch-action: none;
+}
+input[type="range"]::-webkit-slider-runnable-track { height: 1px; background: var(--ink-2); }
+input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 9px; height: 17px; margin-top: -8px; border: 0; border-radius: 1px; background: var(--accent); }
+input[type="range"]::-moz-range-track { height: 1px; background: var(--ink-2); }
+input[type="range"]::-moz-range-thumb { width: 9px; height: 17px; border: 0; border-radius: 1px; background: var(--accent); }
+
+/* ---------- bottom bar ---------- */
+.bar { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 10px 22px; }
+.bar-extra { display: contents; }
+.grp { display: flex; align-items: center; gap: 8px; }
+.grp-cap { color: var(--ink-2); }
+.grp-explode .val { width: 34px; font-size: 11px; color: var(--ink-2); text-align: right; }
+.more { display: none; }
+/* watch box: leather-box icon, "Watch box", the watch on show */
+.box-btn { gap: 8px; margin-right: 14px; padding: 0 12px 0 10px; }
+.box-ico { width: 18px; height: 15px; }
+.box-name {
+  padding-left: 8px; border-left: 1px solid var(--rule-2); color: var(--ink-2);
+  font-weight: 400; letter-spacing: .02em; text-transform: none; font-size: 12px;
+  max-width: 160px; overflow: hidden; text-overflow: ellipsis;
+}
+.box-name:empty { display: none; }
+
+/* ---------- zoom buttons (wallpaper apps may not forward the wheel) ---------- */
+.zoom {
+  position: absolute; z-index: 1; left: var(--side-l); top: 50%; transform: translateY(-50%);
+  display: flex; flex-direction: column; gap: 6px;
+}
+.zoom .btn { font-size: 17px; font-weight: 300; }
+@media (hover: none) and (pointer: coarse) { .zoom { display: none; } }
+
+/* ---------- labels ---------- */
+.leaders, .labels { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.leaders { width: 100%; height: 100%; }
+.ldr path { fill: none; stroke: var(--leader); stroke-width: .8; }
+.ldr circle { fill: var(--paper); stroke: var(--ink); stroke-width: 1; }
+.ldr.emph path { stroke: var(--accent); stroke-width: 1.4; }
+.ldr.emph circle { fill: var(--accent); stroke: var(--accent); }
+.lbl {
+  appearance: none; -webkit-appearance: none; display: block; margin: 0; border: 0; border-radius: 0; background: none; color: inherit; text-align: left;
+  position: absolute; left: 0; top: 0; padding: 0 1px; box-sizing: border-box;
+  white-space: nowrap; line-height: 1; pointer-events: none; cursor: pointer; will-change: transform, opacity;
+  text-shadow: 0 0 2px var(--paper), 0 0 4px var(--paper), 0 0 6px var(--paper);
+}
+.lbl.live { pointer-events: auto; }
+.ui.bare .lbl { pointer-events: none !important; cursor: default; }
+.lbl.L { text-align: right; }
+.lbl-name { display: block; overflow: hidden; text-overflow: ellipsis; font-size: 10.5px; line-height: 14px; font-weight: 500; letter-spacing: .09em; text-transform: uppercase; color: var(--ink); }
+.lbl-sub { display: block; overflow: hidden; text-overflow: ellipsis; font-family: var(--font-mono); font-size: 10px; line-height: 14px; color: var(--ink-2); }
+.labels.nosub .lbl-sub { display: none; }
+.lbl.emph .lbl-name, .lbl:hover .lbl-name, .lbl:focus-visible .lbl-name { color: var(--accent); }
+
+.tip {
+  position: absolute; left: 0; top: 0; padding: 4px 7px; pointer-events: none; white-space: nowrap;
+  background: var(--tip-bg); color: var(--tip-ink);
+  font-size: 10px; font-weight: 500; letter-spacing: .09em; text-transform: uppercase;
+}
+
+/* ---------- info panel ---------- */
+.panel {
+  position: absolute; z-index: 2;
+  right: var(--side-r);
+  top: calc(176px + env(safe-area-inset-top, 0px));
+  width: 330px; max-height: calc(100% - 176px - 84px - env(safe-area-inset-top, 0px) - var(--pad-b));
+  box-sizing: border-box; overflow: auto; overscroll-behavior: contain;
+  padding: 16px 20px 18px; background: var(--sheet);
+  border: 1px solid var(--rule-2); border-top: 2px solid var(--accent);
+  pointer-events: auto; user-select: text; -webkit-user-select: text;
+  transform: translateX(calc(100% + 40px)); opacity: 0; visibility: hidden;
+  transition: transform .38s cubic-bezier(.2, .7, .2, 1), opacity .25s ease, visibility 0s linear .38s;
+}
+.panel.open { transform: none; opacity: 1; visibility: visible; transition: transform .38s cubic-bezier(.2, .7, .2, 1), opacity .25s ease, visibility 0s; }
+.panel-head { display: flex; justify-content: space-between; align-items: flex-start; }
+.panel-cat { color: var(--accent); }
+.panel-name { margin: 6px 0 10px; font-weight: 300; font-size: 30px; line-height: 1.05; }
+.panel-desc { margin: 0 0 12px; font-size: 14px; line-height: 1.5; }
+.panel-live { margin: 0 0 12px; padding: 6px 0 6px 10px; border-left: 2px solid var(--accent); font-size: 11.5px; line-height: 1.4; color: var(--ink); }
+.facts { width: 100%; border-collapse: collapse; margin: 0 0 14px; }
+.facts th, .facts td { padding: 6px 0; border-top: 1px solid var(--rule); vertical-align: top; }
+.facts tr:last-child th, .facts tr:last-child td { border-bottom: 1px solid var(--rule); }
+.facts th { text-align: left; padding-right: 12px; font-weight: 500; font-size: 10px; letter-spacing: .09em; text-transform: uppercase; color: var(--ink-2); white-space: nowrap; }
+.facts td { text-align: right; font-family: var(--font-mono); font-size: 12px; font-variant-numeric: tabular-nums; }
+.panel-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* ---------- popover, caption, hint, toast ---------- */
+.pop {
+  position: absolute; z-index: 3; right: var(--side-r); bottom: calc(64px + var(--pad-b));
+  width: 320px; max-width: calc(100% - 32px); max-height: calc(100% - 140px); overflow: auto; box-sizing: border-box;
+  padding: 14px 18px 16px; background: var(--paper); border: 1px solid var(--rule-2); pointer-events: auto;
+}
+.pop-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+.pop h2 { margin: 0; color: var(--ink-2); }
+.keys { display: grid; grid-template-columns: auto 1fr; gap: 5px 12px; margin: 0 0 12px; font-size: 13px; }
+.keys dt { margin: 0; white-space: nowrap; }
+.keys dd { margin: 0; color: var(--ink-2); }
+kbd {
+  display: inline-block; min-width: 18px; padding: 1px 4px; box-sizing: border-box; text-align: center;
+  border: 1px solid var(--rule-2); border-radius: 2px; font-family: var(--font-mono); font-size: 11px; color: var(--ink);
+}
+.about { margin: 0; padding-top: 10px; border-top: 1px solid var(--rule); font-size: 12px; line-height: 1.5; color: var(--ink-2); }
+.tips { margin: 0 0 10px; font-size: 12px; line-height: 1.5; color: var(--ink-2); }
+
+/* the spotlight caption of the cinematic loop: bottom left, but on very wide screens
+   it moves in towards the watch */
+.caption {
+  position: absolute; left: max(28px, calc(env(safe-area-inset-left, 0px) + 16px), calc(50% - 118vh)); bottom: calc(32px + var(--pad-b));
+  max-width: min(440px, calc(100% - 56px)); padding: 4px 0 4px 16px; border-left: 2px solid var(--accent);
+  opacity: 0; transition: opacity .45s ease; pointer-events: none;
+  text-shadow: 0 0 3px var(--paper), 0 0 6px var(--paper);
+}
+.caption.on { opacity: 1; }
+.caption-k { color: var(--accent); }
+.caption-n { margin: 3px 0 4px; font-weight: 300; font-size: 28px; line-height: 1.1; }
+.caption-d { margin: 0; font-size: 14px; line-height: 1.45; color: var(--ink-2); }
+
+.hint {
+  position: absolute; left: 50%; bottom: calc(40px + var(--pad-b)); transform: translateX(-50%);
+  padding: 7px 12px; background: var(--veil); border: 1px solid var(--rule-2); color: var(--ink-2);
+  opacity: 0; transition: opacity .5s ease; pointer-events: none; white-space: nowrap;
+}
+.hint.on { opacity: 1; }
+.toast {
+  position: absolute; z-index: 4; left: 50%; bottom: calc(76px + var(--pad-b)); transform: translate(-50%, 8px);
+  max-width: min(560px, calc(100% - 32px)); box-sizing: border-box; padding: 9px 14px;
+  background: var(--sheet); border: 1px solid var(--rule-2); border-left: 2px solid var(--accent);
+  font-size: 13px; line-height: 1.45; opacity: 0; visibility: hidden; pointer-events: none;
+  transition: opacity .3s ease, transform .3s ease, visibility 0s linear .3s;
+}
+.toast.on { opacity: 1; visibility: visible; transform: translate(-50%, 0); pointer-events: auto; transition: opacity .3s ease, transform .3s ease, visibility 0s; }
+.toast-link { color: var(--accent); font-family: var(--font-mono); font-size: 12px; word-break: break-all; }
+
+/* ---------- recorder ---------- */
+.modal {
+  position: absolute; inset: 0; z-index: 5; display: flex; align-items: center; justify-content: center;
+  padding: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+  box-sizing: border-box; background: var(--veil); pointer-events: auto;
+}
+.modal-card {
+  width: min(470px, 100%); max-height: 100%; overflow: auto; box-sizing: border-box; padding: 16px 20px 18px;
+  background: var(--sheet); border: 1px solid var(--rule-2); border-top: 2px solid var(--accent);
+}
+.modal-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+.modal-title { margin: 0; font-weight: 300; font-size: 26px; }
+.field { display: flex; flex-direction: column; gap: 6px; margin: 0 0 12px; }
+.field .seg { flex-wrap: wrap; align-self: flex-start; }
+.field-cap { color: var(--ink-2); }
+.modal-note { margin: 0 0 10px; font-size: 11px; color: var(--ink); }
+.modal-text { margin: 0 0 12px; font-size: 14px; line-height: 1.5; }
+.modal-text.dim { font-size: 12.5px; color: var(--ink-2); }
+.modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; }
+.rec-comp { position: fixed; left: 0; top: 0; width: 2px; height: 2px; opacity: 0; pointer-events: none; }
+.recbar {
+  position: absolute; z-index: 5; left: 50%; top: calc(14px + env(safe-area-inset-top, 0px)); transform: translateX(-50%);
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: center;
+  max-width: calc(100% - 32px); box-sizing: border-box; padding: 8px 10px 8px 14px;
+  background: var(--sheet); border: 1px solid var(--rule-2); pointer-events: auto; font-size: 11px;
+}
+.rec-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--rec); animation: beat 1s steps(2, jump-none) infinite; }
+.rec-prog { position: relative; width: 120px; height: 3px; background: var(--rule); overflow: hidden; }
+.rec-prog i { position: absolute; inset: 0; background: var(--accent); transform-origin: 0 50%; transform: scaleX(0); }
+.ui.rec .labels, .ui.rec .leaders, .ui.rec .caption, .ui.rec .hint { display: none; }
+
+/* ---------- phones ---------- */
+@media (max-width: 640px) {
+  .title { font-size: 28px; min-height: 27px; }
+  .sub { margin-top: 6px; font-size: 9.5px; line-height: 1.5; }
+  .sub span { display: block; }
+  .sub .sep { display: none; }
+  .beats { white-space: nowrap; }
+  .clock { font-size: 17px; }
+  .pill { height: 18px; font-size: 9.5px; }
+  .beats, .reserve-text { font-size: 10px; }
+  .gauge { width: 96px; }
+  .bar { gap: 8px; }
+  .more { display: inline-flex; }
+  .bar-extra { display: none; }
+  .bar.expanded .bar-extra {
+    display: flex; flex-wrap: wrap; justify-content: center; gap: 10px 14px; width: 100%;
+    padding: 10px 0 2px; border-top: 1px solid var(--rule);
+  }
+  .grp-view { width: 100%; justify-content: center; }
+  .grp-view .grp-cap { display: none; }
+  .seg button { padding: 0 9px; }
+  /* watch box: icon only (the name is the title above) */
+  .box-btn { width: 34px; padding: 0; margin-right: 0; }
+  .box-cap, .box-name { display: none; }
+  .panel {
+    left: 0; right: 0; top: auto; bottom: 0; width: auto; max-height: 52%;
+    padding: 14px max(16px, env(safe-area-inset-right, 0px)) calc(16px + var(--pad-b)) max(16px, env(safe-area-inset-left, 0px));
+    border-left: 0; border-right: 0; border-bottom: 0; background: var(--paper);
+    transform: translateY(100%);
+  }
+  .panel-name { font-size: 25px; }
+  .pop { left: max(16px, env(safe-area-inset-left, 0px)); right: max(16px, env(safe-area-inset-right, 0px)); width: auto; bottom: calc(56px + var(--pad-b)); }
+  .caption { left: max(16px, env(safe-area-inset-left, 0px)); max-width: calc(100% - max(16px, env(safe-area-inset-left, 0px)) - max(16px, env(safe-area-inset-right, 0px))); box-sizing: border-box; bottom: calc(20px + var(--pad-b)); }
+  .caption-n { font-size: 22px; }
+  .caption-d { font-size: 12.5px; }
+}
+@media (max-width: 420px) {
+  .bph { display: none; }
+  .beats.sd .bph { display: inline; }
+}
+
+/* Reduced motion: switch transitions off outright. (The common "transition-duration:
+   .01ms" trick gives EVERY element `transition: all`, so the per-frame transform /
+   opacity / path writes of the labels and leaders would each start a CSS transition.) */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; }
+}
+</style>
+<!--/head-->
+<script>
+  // Runs before anything else on the page:
+  //  - wallpaper apps (Lively, Wallpaper Engine) push their properties right after load:
+  //    queue them until ui/wallpaper.js replays them (also Lively's pause event)
+  //  - a wallpaper URL keeps the interface hidden from the first paint
+  //  - the last watch's colours are painted at once (no flash of the default theme
+  //    when the wallpaper restarts)
+  (function () {
+    window.__wallpaperQueue = [];
+    window.livelyPropertyListener = function (n, v) { if (window.__wallpaperQueue) window.__wallpaperQueue.push(['lively', n, v]); };
+    window.wallpaperPropertyListener = { applyUserProperties: function (p) { if (window.__wallpaperQueue) window.__wallpaperQueue.push(['we', p]); } };
+    window.livelyWallpaperPlaybackChanged = function (d) { window.__livelyPlayback = d; };
+    var de = document.documentElement;
+    try {
+      var hs = String(location.hash || '');
+      try { hs = decodeURIComponent(hs); } catch (e) { /* keep raw */ }
+      if (/(^#|[.~_])wallpaper([.~_]|$)/i.test(hs) || /[?&]wallpaper(=|&|$)/i.test(location.search)) {
+        de.classList.add('wp-boot');
+        // keep clickable chrome above the Windows taskbar (.taskbar<px>, default 48)
+        var m = hs.match(/[.~_]taskbar([0-9]+)/i) || location.search.match(/[?&]taskbar=([0-9]+)/i);
+        var tb = m ? Math.min(400, Number(m[1])) : 48;
+        de.style.setProperty('--inset-b', (tb > 0 ? tb + 4 : 0) + 'px');
+      }
+    } catch (e) { /* ignore */ }
+    try {
+      var b = JSON.parse(localStorage.getItem('watch.themeBoot') || 'null');
+      if (b && (b.mode === 'light' || b.mode === 'dark')) {
+        de.setAttribute('data-theme', b.mode);
+        var v = b.vars || {};
+        for (var k in v) if (/^--[a-z0-9-]+$/.test(k)) de.style.setProperty(k, String(v[k]));
+      }
+    } catch (e) { /* storage unavailable */ }
+  })();
+</script>
+<div id="stage"></div>
+<div id="ui" class="ui booting">
+  <svg id="leaders" class="leaders" aria-hidden="true"></svg>
+  <div id="labels" class="labels"></div>
+  <div id="tip" class="tip" hidden></div>
+
+  <header id="top" class="top chrome">
+    <div class="hud-l">
+      <h1 id="title" class="title"></h1>
+      <p id="sub" class="sub caps"></p>
+    </div>
+    <section class="hud-r" aria-label="Watch status">
+      <time id="clock" class="clock">--:--:--.-</time>
+      <span id="pill" class="pill caps" data-s="live">Live</span>
+      <span id="beats" class="beats mono"><span id="bph" class="bph"></span><span id="beat-l">beat <span id="beat-n">–</span></span></span>
+      <div class="reserve">
+        <span class="reserve-text"><span class="caps">Reserve</span><span id="reserve-val" class="mono">–</span></span>
+        <div class="reserve-row">
+          <div id="gauge" class="gauge" role="meter" aria-label="Power reserve in hours" aria-valuemin="0" aria-valuemax="48"><i id="gauge-fill"></i></div>
+          <button id="wind-btn" class="btn sm" type="button" title="Wind the watch (W)">Wind</button>
+        </div>
+      </div>
+    </section>
+  </header>
+
+  <div id="zoom" class="zoom chrome" role="group" aria-label="Zoom">
+    <button id="zoom-in" class="btn icon" type="button" title="Zoom in (+)" aria-label="Zoom in">+</button>
+    <button id="zoom-out" class="btn icon" type="button" title="Zoom out (−)" aria-label="Zoom out">−</button>
+    <button id="zoom-reset" class="btn icon" type="button" title="Reset view (R)" aria-label="Reset view">
+      <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path d="M13.2 8.6A5.2 5.2 0 1 1 11.6 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M12.4 1.4v3.4H9" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+  </div>
+
+  <nav id="bar" class="bar chrome" aria-label="Controls">
+    <div class="grp grp-view">
+      <button id="box-btn" class="btn box-btn" type="button" title="Watch box: choose the watch of the day (B)" aria-label="Watch box">
+        <svg class="box-ico" viewBox="0 0 20 16" aria-hidden="true"><path d="M2.6 6.4 4.3 2.4h11.4l1.7 4" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><rect x="2" y="6.4" width="16" height="7.6" rx="1.1" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M4.3 11.7h11.4" fill="none" stroke="currentColor" stroke-width=".8" stroke-dasharray="1.2 1.1"/><rect x="8.5" y="5.4" width="3" height="2.9" rx=".6" fill="currentColor"/></svg>
+        <span class="box-cap">Watch box</span>
+        <span id="box-name" class="box-name"></span>
+      </button>
+      <span class="grp-cap caps" aria-hidden="true">View</span>
+      <div class="seg" role="group" aria-label="View">
+        <button type="button" data-view="dial" aria-pressed="true" title="Dial (D)">Dial</button>
+        <button type="button" data-view="movement" aria-pressed="false" title="Movement (M)">Movement</button>
+        <button type="button" data-view="exploded" aria-pressed="false" title="Exploded (E)">Exploded</button>
+      </div>
+      <button id="more-btn" class="btn more" type="button" aria-expanded="false" aria-controls="bar-extra">More</button>
+    </div>
+    <div id="bar-extra" class="bar-extra">
+      <div class="grp" role="group" aria-label="Display">
+        <button type="button" class="btn tgl" data-toggle="labels" aria-pressed="true" title="Labels (L)">Labels</button>
+        <button type="button" class="btn tgl" data-toggle="xray" aria-pressed="false" title="X-ray (X)">X-ray</button>
+        <button type="button" class="btn tgl" data-toggle="case" aria-pressed="true" title="Case (C)">Case</button>
+      </div>
+      <label class="grp grp-explode">
+        <span class="grp-cap caps">Explode</span>
+        <input id="explode" type="range" min="0" max="100" step="1" value="0" aria-label="Explode amount">
+        <span id="explode-val" class="val mono">0%</span>
+      </label>
+      <div class="grp">
+        <span class="grp-cap caps" aria-hidden="true">Time</span>
+        <div class="seg" role="group" aria-label="Time rate">
+          <button type="button" class="num" data-time="0.05" aria-pressed="false" title="Slow motion ×0.05">×0.05</button>
+          <button type="button" class="num" data-time="0.25" aria-pressed="false" title="Slow motion ×0.25">×0.25</button>
+          <button type="button" data-time="1" aria-pressed="true" title="Real time">Live</button>
+          <button type="button" class="num" data-time="60" aria-pressed="false" title="Time-lapse ×60">×60</button>
+        </div>
+      </div>
+      <div class="grp">
+        <button id="wall-btn" class="btn" type="button" title="Back to the wallpaper (Space)">Wallpaper</button>
+        <button id="rec-btn" class="btn" type="button">Record video</button>
+        <button id="help-btn" class="btn icon" type="button" aria-expanded="false" aria-controls="help" aria-label="Keyboard shortcuts and about">?</button>
+      </div>
+    </div>
+  </nav>
+
+  <aside id="panel" class="panel chrome" aria-labelledby="panel-name" aria-hidden="true" inert>
+    <div class="panel-head">
+      <span id="panel-cat" class="panel-cat caps"></span>
+      <button id="panel-close" class="icon-btn" type="button" aria-label="Close (Esc)">×</button>
+    </div>
+    <h2 id="panel-name" class="panel-name"></h2>
+    <p id="panel-desc" class="panel-desc"></p>
+    <p id="panel-live" class="panel-live mono" aria-live="off"></p>
+    <table class="facts"><tbody id="panel-facts"></tbody></table>
+    <div class="panel-actions">
+      <button id="panel-focus" class="btn" type="button">Focus</button>
+      <button id="panel-wind" class="btn" type="button" hidden>Wind the watch</button>
+    </div>
+  </aside>
+
+  <div id="help" class="pop chrome" role="dialog" aria-label="Keyboard shortcuts and about" hidden>
+    <div class="pop-head">
+      <h2 class="caps">Keyboard</h2>
+      <button id="help-close" class="icon-btn" type="button" aria-label="Close">×</button>
+    </div>
+    <dl class="keys">
+      <dt><kbd>D</kbd> <kbd>M</kbd> <kbd>E</kbd></dt><dd>Dial · Movement · Exploded</dd>
+      <dt><kbd>B</kbd></dt><dd>Watch box: pick the watch of the day</dd>
+      <dt><kbd>X</kbd></dt><dd>X-ray plates and bridges</dd>
+      <dt><kbd>L</kbd></dt><dd>Labels on / off</dd>
+      <dt><kbd>C</kbd></dt><dd>Show / hide case and strap</dd>
+      <dt><kbd>W</kbd></dt><dd>Wind the watch</dd>
+      <dt><kbd>[</kbd> <kbd>]</kbd></dt><dd>Explode less / more</dd>
+      <dt><kbd>+</kbd> <kbd>−</kbd> <kbd>R</kbd></dt><dd>Zoom in / out · reset the view</dd>
+      <dt><kbd>Space</kbd></dt><dd>Wallpaper</dd>
+      <dt><kbd>Esc</kbd></dt><dd>Close panel · back to the wallpaper</dd>
+    </dl>
+    <p class="tips">Drag to orbit; scroll, pinch or use + − to zoom. Click a part for details. Drag the crown sideways to wind. In wallpaper mode, click anywhere to explore — it goes back to the wallpaper by itself after a while.</p>
+    <p class="about">Unofficial fan replicas, modelled from public photographs and specifications. Not affiliated with NOMOS Glashütte, Grand Seiko or Tudor. <span id="about-now"></span></p>
+  </div>
+
+  <div id="caption" class="caption" aria-live="polite">
+    <div class="caption-k caps">In focus</div>
+    <div id="caption-n" class="caption-n"></div>
+    <p id="caption-d" class="caption-d"></p>
+  </div>
+  <div id="hint" class="hint caps" role="status">Click anywhere to explore</div>
+  <div id="toast" class="toast" role="status"></div>
+</div>
+<!--SCRIPT-->

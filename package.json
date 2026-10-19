@@ -1,0 +1,21 @@
+{
+  "name": "watch-atelier",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Real-time 3D replicas of four watches as an interactive live wallpaper",
+  "scripts": {
+    "build": "node build.mjs",
+    "dev": "node build.mjs --watch",
+    "check": "node research/gs-sbga211/check.mjs && node research/tangente-update-147/check.mjs --quick && node research/tudor-m79470/check.mjs"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "@fontsource/jetbrains-mono": "^5.1.0",
+    "@fontsource/jost": "^5.1.0",
+    "esbuild": "^0.24.0",
+    "three": "^0.170.0"
+  }
+}

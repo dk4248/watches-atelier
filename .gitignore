@@ -1,0 +1,10 @@
+# dependencies
+node_modules/
+
+# renders saved while building and reviewing the watches
+captures/
+
+# build output: keep only the finished wallpaper (no rebuild needed to use it)
+dist/*
+!dist/index.html
+!dist/lively/
