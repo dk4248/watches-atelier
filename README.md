@@ -42,10 +42,16 @@ customise panel.
 
 ### Linux
 
-Point any "web page as wallpaper" host at the file:
+Get the files (the built wallpaper is included, so there's nothing to build):
+
+```bash
+git clone https://github.com/dk4248/watches-wallpaper.git ~/watches-wallpaper
+```
+
+Then point any "web page as wallpaper" host at the file:
 
 ```
-file:///path/to/watch-atelier/dist/lively/index.html
+file:///home/<you>/watches-wallpaper/dist/lively/index.html
 ```
 
 - **KDE Plasma.** Install the *HTML Wallpaper* plugin from the KDE Store. To get it, right-click
@@ -55,7 +61,7 @@ file:///path/to/watch-atelier/dist/lively/index.html
     Folder View the icons take the clicks.
 - **Hyprland.** The official `hyprwinwrap` plugin (from `hyprland-plugins`) pins a window as the
   wallpaper. Run a Chromium-based browser in app mode on the file, for example
-  `chromium --app="file:///path/to/watch-atelier/dist/lively/index.html"`, and add the window rule
+  `chromium --app="file://$HOME/watches-wallpaper/dist/lively/index.html"`, and add the window rule
   from hyprwinwrap's README.
 - **Other X11 desktops** (i3, Openbox, Xfce, …). `xwinwrap` can run a browser window as the
   desktop background in the same way.
