@@ -4,7 +4,7 @@ Real-time 3D replicas of four mechanical watches, made to run as an interactive 
 Every wheel really meshes and turns at its true rate, in sync with your clock: the escapements
 tick beat by beat, the Spring Drive glides, rotors swing with gravity and wind the mainspring.
 
-**Website: [dk4248.github.io/watches-wallpaper](https://dk4248.github.io/watches-wallpaper/)**.
+**Website: [dk4248.github.io/watches-atelier](https://dk4248.github.io/watches-atelier/)**.
 Try the live replica in your browser and download the wallpaper for Windows or Linux.
 
 | Watch | Calibre | Look for |
@@ -29,7 +29,7 @@ no internet connection.
    ```powershell
    winget install --id rocksdanister.LivelyWallpaper -e
    ```
-2. Download [`watches-wallpaper-lively.zip`](https://dk4248.github.io/watches-wallpaper/download/watches-wallpaper-lively.zip).
+2. Download [`watches-atelier-lively.zip`](https://dk4248.github.io/watches-atelier/download/watches-atelier-lively.zip).
    It's also in this repository at `docs/download/`.
 3. Open Lively, click **+** (Add wallpaper) and drop the zip in, or browse to it.
 4. Click the new **Watch Atelier** tile to set it as your wallpaper. Lively doesn't apply imported
@@ -53,7 +53,7 @@ Tips:
 
 1. Download the wallpaper file and keep it somewhere permanent:
    ```bash
-   curl -L -o ~/watches-wallpaper.html https://dk4248.github.io/watches-wallpaper/wallpaper/index.html
+   curl -L -o ~/watches-atelier.html https://dk4248.github.io/watches-atelier/wallpaper/index.html
    ```
    Or clone this repository; the same file is at `docs/wallpaper/index.html`.
 2. Set it as your wallpaper, using the steps for your desktop below.
@@ -63,7 +63,7 @@ Tips:
 1. Right-click the desktop and open **Desktop and Wallpaper…**.
 2. Next to **Wallpaper type**, click **Get New Plugins…**, search for **HTML Wallpaper** and install it.
 3. Choose **HTML Wallpaper** as the wallpaper type and set its URL to
-   `file:///home/<you>/watches-wallpaper.html`.
+   `file:///home/<you>/watches-atelier.html`.
 4. To click and drag the watch, change **Layout** at the top of the same dialog from
    **Folder View** to **Desktop**. In Folder View the icons take the clicks.
 
@@ -77,7 +77,7 @@ The `hyprwinwrap` plugin from `hyprland-plugins` pins a window as the wallpaper.
 a Chromium-based browser in app mode and add the window rule from hyprwinwrap's README:
 
 ```bash
-chromium --app=file://$HOME/watches-wallpaper.html
+chromium --app=file://$HOME/watches-atelier.html
 ```
 
 **GNOME**
@@ -86,13 +86,13 @@ GNOME can't use a web page as its wallpaper; its live-wallpaper extensions play 
 can still run the replica full screen on a workspace of its own:
 
 ```bash
-chromium --kiosk file://$HOME/watches-wallpaper.html
+chromium --kiosk file://$HOME/watches-atelier.html
 ```
 
 **Online instead**
 
 Any host that accepts a web address can load the hosted copy. It needs an internet connection when
-the wallpaper starts: `https://dk4248.github.io/watches-wallpaper/wallpaper/`
+the wallpaper starts: `https://dk4248.github.io/watches-atelier/wallpaper/`
 
 ## Controls
 
@@ -105,7 +105,7 @@ the wallpaper starts: `https://dk4248.github.io/watches-wallpaper/wallpaper/`
 ### URL options
 
 Add these to the address after `#wallpaper`, separated by dots, for example
-`watches-wallpaper.html#wallpaper.dial.taskbar0`:
+`watches-atelier.html#wallpaper.dial.taskbar0`:
 
 | Token | Effect |
 |---|---|

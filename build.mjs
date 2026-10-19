@@ -117,7 +117,7 @@ async function buildAll() {
   fs.writeFileSync(path.join(docs, 'app', 'index.html'), full);
   fs.writeFileSync(path.join(docs, 'wallpaper', 'index.html'), wallpaperHtml);
   const pkgFiles = fs.readdirSync(lively).filter((n) => fs.statSync(path.join(lively, n)).isFile()).sort();
-  fs.writeFileSync(path.join(docs, 'download', 'watches-wallpaper-lively.zip'),
+  fs.writeFileSync(path.join(docs, 'download', 'watches-atelier-lively.zip'),
     zipFiles(pkgFiles.map((n) => ({ name: n, data: fs.readFileSync(path.join(lively, n)) }))));
   const kb = (s) => (Buffer.byteLength(s) / 1024).toFixed(0);
   console.log(`[build] ${new Date().toLocaleTimeString()} ok in ${Date.now() - t0} ms — full ${kb(full)} KB, artifact ${kb(fragmentArtifact)} KB`);
