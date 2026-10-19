@@ -4,7 +4,7 @@ node_modules/
 # renders saved while building and reviewing the watches
 captures/
 
-# build output: keep only the finished wallpaper (no rebuild needed to use it)
+# build output: keep only the Lively package (the install script uses it). The website and its
+# downloads are built into docs/, which is committed.
 dist/*
-!dist/index.html
 !dist/lively/

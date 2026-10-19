@@ -6,6 +6,7 @@
 import * as esbuild from 'esbuild';
 import fs from 'node:fs';
 import path from 'node:path';
+import { zipFiles } from './tools/zip.mjs';
 
 const root = path.dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1'));
 const dist = path.join(root, 'dist');
@@ -64,7 +65,8 @@ async function buildAll() {
   const lively = path.join(dist, 'lively');
   fs.mkdirSync(lively, { recursive: true });
   const boot = `<script>if(!location.hash)history.replaceState(null,'','#wallpaper')</script>`;
-  fs.writeFileSync(path.join(lively, 'index.html'), full.replace('<script>', `${boot}\n<script>`));
+  const wallpaperHtml = full.replace('<script>', `${boot}\n<script>`);
+  fs.writeFileSync(path.join(lively, 'index.html'), wallpaperHtml);
   // The collection, in order (index = value the Lively dropdown sends): dropdown names
   // and the full names for the description.
   let watchItems = ['NOMOS Tangente 139'], watchNames = ['NOMOS Glashütte Tangente 139'];
@@ -105,6 +107,18 @@ async function buildAll() {
     theme: { type: 'dropdown', value: 0, text: 'Background', items: ['Match the watch', 'Light', 'Dark'] },
   }, null, 2));
   fs.writeFileSync(path.join(dist, 'artifact.html'), fragmentArtifact.replace('<!--/head-->', ''));
+
+  // GitHub Pages site (docs/, published from main): the live viewer, the wallpaper page
+  // (also the single-file Linux download), and the Lively package as a .zip with
+  // LivelyInfo.json at the zip root, as Lively's importer requires. docs/index.html (the
+  // landing page) and docs/img/ are written by hand.
+  const docs = path.join(root, 'docs');
+  for (const d of ['app', 'wallpaper', 'download']) fs.mkdirSync(path.join(docs, d), { recursive: true });
+  fs.writeFileSync(path.join(docs, 'app', 'index.html'), full);
+  fs.writeFileSync(path.join(docs, 'wallpaper', 'index.html'), wallpaperHtml);
+  const pkgFiles = fs.readdirSync(lively).filter((n) => fs.statSync(path.join(lively, n)).isFile()).sort();
+  fs.writeFileSync(path.join(docs, 'download', 'watches-wallpaper-lively.zip'),
+    zipFiles(pkgFiles.map((n) => ({ name: n, data: fs.readFileSync(path.join(lively, n)) }))));
   const kb = (s) => (Buffer.byteLength(s) / 1024).toFixed(0);
   console.log(`[build] ${new Date().toLocaleTimeString()} ok in ${Date.now() - t0} ms — full ${kb(full)} KB, artifact ${kb(fragmentArtifact)} KB`);
 }
