@@ -272,6 +272,13 @@
             <p class="note">Lively pauses the wallpaper behind full-screen and maximised apps, so it costs nothing while you work.</p>
           </details>
           <details>
+            <summary>Wallpaper missing after a restart?</summary>
+            <p class="note">Lively sometimes starts before your monitor has woken up, and then skips the wallpaper and never retries. The guard fixes this. It's a small scheduled task that runs as you, with no admin rights and no window. After sign-in, on unlock and every 5 minutes, it puts Watch Atelier back if Lively's saved layout wants it but nothing is playing. A wallpaper you pick yourself is left alone.</p>
+            <p class="note">Download <a href="download/watches-atelier-guard.zip" download><code>watches-atelier-guard.zip</code></a>, unzip it, and run this in that folder. Add <code>-Remove</code> to take it out again:</p>
+            <pre><code>powershell -NoProfile -ExecutionPolicy Bypass -File install-guard.ps1</code></pre>
+            <p class="note">The install script below sets the guard up automatically.</p>
+          </details>
+          <details>
             <summary>Updating, or installing from the repository</summary>
             <p class="note">To update, delete the old tile in Lively and import the new zip.</p>
             <p class="note">From a clone of the repository, this script installs or updates in place and keeps your settings:</p>

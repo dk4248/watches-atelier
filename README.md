@@ -41,6 +41,16 @@ Tips:
 - Clicks reach the watch only on empty desktop. To keep icons out of the way, right-click the
   desktop and turn off **View → Show desktop icons**.
 - Lively pauses the wallpaper behind full-screen and maximised apps.
+- **Wallpaper missing after a restart?** Lively sometimes starts before your monitor has woken
+  up, and then skips the wallpaper and never retries. The install script below also installs a
+  small guard: a scheduled task that runs as you, with no admin rights and no window. After
+  sign-in, on unlock and every 5 minutes it puts Watch Atelier back if Lively's saved layout wants
+  it but nothing is playing. A wallpaper you pick yourself is left alone. If you imported the zip
+  instead, download [`watches-atelier-guard.zip`](https://dk4248.github.io/watches-atelier/download/watches-atelier-guard.zip),
+  unzip it and run this in that folder (add `-Remove` to take it out again):
+  ```powershell
+  powershell -NoProfile -ExecutionPolicy Bypass -File install-guard.ps1
+  ```
 - To update, delete the old tile and import the new zip. From a clone of this repository, the
   install script updates in place and keeps your settings:
   ```powershell

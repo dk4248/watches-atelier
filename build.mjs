@@ -119,6 +119,9 @@ async function buildAll() {
   const pkgFiles = fs.readdirSync(lively).filter((n) => fs.statSync(path.join(lively, n)).isFile()).sort();
   fs.writeFileSync(path.join(docs, 'download', 'watches-atelier-lively.zip'),
     zipFiles(pkgFiles.map((n) => ({ name: n, data: fs.readFileSync(path.join(lively, n)) }))));
+  // the restart guard on its own, for wallpapers imported from the zip
+  fs.writeFileSync(path.join(docs, 'download', 'watches-atelier-guard.zip'),
+    zipFiles(['install-guard.ps1', 'lively-guard.ps1'].map((n) => ({ name: n, data: fs.readFileSync(path.join(root, 'tools', n)) }))));
   const kb = (s) => (Buffer.byteLength(s) / 1024).toFixed(0);
   console.log(`[build] ${new Date().toLocaleTimeString()} ok in ${Date.now() - t0} ms — full ${kb(full)} KB, artifact ${kb(fragmentArtifact)} KB`);
 }

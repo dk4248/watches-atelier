@@ -5,10 +5,14 @@
 #   ... -NoActivate        copy into Lively's library only (pick it in Lively yourself)
 #   ... -ResetProperties   also reset this wallpaper's saved Lively settings (needed
 #                          when LivelyProperties.json gained new options)
+#   ... -NoGuard           skip installing the restart guard (tools\install-guard.ps1), the
+#                          scheduled task that puts the wallpaper back when Lively skips it
+#                          after a restart
 #
 # Lively must be installed and running. Nothing outside this wallpaper's own library
-# folder is touched; other wallpapers in your library are left exactly as they are.
-param([switch]$NoActivate, [switch]$ResetProperties)
+# folder (and the guard's Lively Wallpaper\WatchAtelier folder) is touched; other wallpapers
+# in your library are left exactly as they are.
+param([switch]$NoActivate, [switch]$ResetProperties, [switch]$NoGuard)
 $ErrorActionPreference = 'Stop'
 
 $src = Join-Path $PSScriptRoot '..\dist\lively' | Resolve-Path
@@ -28,6 +32,8 @@ if ($ResetProperties) {
   if (Test-Path $saved) { Remove-Item -Recurse -Force $saved; Write-Host 'Reset saved Lively settings for this wallpaper.' }
 }
 
+if (-not $NoGuard) { & (Join-Path $PSScriptRoot 'install-guard.ps1') }
+
 if ($NoActivate) { Write-Host 'Installed (not activated). Pick "Watch Atelier" in Lively.'; return }
 
 $proc = Get-Process -Name 'Lively' -ErrorAction SilentlyContinue | Select-Object -First 1
@@ -36,4 +42,4 @@ if (-not (Test-Path $lively)) { throw 'Lively.exe not found. Install Lively Wall
 if (-not $proc) { Write-Warning 'Lively is not running; start it, then run this script again to activate.'; return }
 
 & $lively setwp --file $dest
-Write-Host 'Activated "Watch Atelier" in Lively (all displays in Duplicate mode).'
+Write-Host 'Activated "Watch Atelier" in Lively.'
