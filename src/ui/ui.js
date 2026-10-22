@@ -10,6 +10,7 @@ import { createShow } from './cinematic.js';
 import { parseWallpaperURL, installWallpaperHooks, createCursorHider } from './wallpaper.js';
 import { createRecorder } from './recorder.js';
 import { createPartRules } from './visibility.js';
+import { createPower } from './power.js';
 
 // The interface around the 3D watch.
 //
@@ -123,11 +124,35 @@ export function createUI(ctx) {
     onTime: (s) => setTimeScale(s),
     onWallpaper: () => goWall('button'),
     onRecord: () => recorder.open(),
+    onPower: () => togglePower(),
     onBox: () => openBox(),
     onZoom: (dir) => zoomStep(dir),
     onResetView: () => resetView(),
     onLayout: () => layoutChanged(),
   });
+
+  // ------------------------------------------------------------------ power switch
+  // Off = a still of the wallpaper, nothing renders (see power.js). Switched off from the
+  // interface of a wallpaper session, it first eases back to the wallpaper composition,
+  // so the still looks like the wallpaper rather than the interactive view.
+  const power = createPower(ctx, {
+    onOff: () => { hideHint(); showTip(null); },
+    onOn: () => { app.lastInput = now(); if (started) layoutChanged(); },
+  });
+  function switchOff() {
+    if (power.state !== 'on' || app.boxed || app.mode === 'rec' || recorder.recording) return;
+    select(null);
+    app.hover = null;
+    app.labelHover = null;
+    showTip(null);
+    let delayMs = 300;
+    if (app.session && app.mode === 'ui') { goWall('power'); delayMs = 2400; }
+    power.requestOff({ delayMs });
+  }
+  function togglePower() {
+    if (power.isOff) power.turnOn();
+    else switchOff();
+  }
 
   const recorder = createRecorder(ctx, {
     begin: beginRecording,
@@ -482,6 +507,7 @@ export function createUI(ctx) {
   let pressedAt = 0;
   function noteInput() { app.lastInput = now(); }
   function onWakeInput(e) {
+    if (power.state !== 'on') return; // switched off: only the on button (or P) does anything
     noteInput();
     if (e.type === 'pointerdown') { pressed = true; pressedAt = now(); }
     if (app.boxed) return;
@@ -523,6 +549,7 @@ export function createUI(ctx) {
   }, { capture: true, passive: true });
 
   function checkIdle(t) {
+    if (power.state !== 'on') return;
     if (!app.session || app.mode !== 'ui' || !(app.idleMs < Infinity)) return;
     if (t - app.lastInput < app.idleMs) return;
     if (recorder.recording || picker.dragging) return;
@@ -843,12 +870,18 @@ export function createUI(ctx) {
     resizeTimer = setTimeout(() => {
       updateViewport();
       if (interactive() && !app.userMoved && !rig.tweening) setView(app.view, { dur: 0.6, keepExplode: true });
+      // switched off: retake the still at the new size (e.g. a monitor that woke up late)
+      power.refresh(800);
     }, 180);
   });
 
   // ------------------------------------------------------------------ keyboard
   window.addEventListener('keydown', (e) => {
     if (e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (power.state !== 'on') {
+      if (power.isOff && (e.key === 'p' || e.key === 'P')) { e.preventDefault(); power.turnOn(); }
+      return;
+    }
     if (app.boxed || boxActive()) return; // the watch box has the keyboard
     if (recorder.recording) {
       if (e.key === 'Escape') { e.preventDefault(); recorder.cancel(); }
@@ -873,6 +906,7 @@ export function createUI(ctx) {
       case 'c': case 'C': setCase(!app.caseOn); break;
       case 'w': case 'W': startWind(); break;
       case 'b': case 'B': openBox(); break;
+      case 'p': case 'P': switchOff(); break;
       case '+': case '=': zoomStep(1); break;
       case '-': case '_': case '−': zoomStep(-1); break;
       case '0': case 'r': case 'R': resetView(); break;
@@ -1011,6 +1045,8 @@ export function createUI(ctx) {
     reg.setExplode(0);
   }
   started = true;
+  // switched off before the last restart: come back off (after a moment of frames for the still)
+  if (power.remembered) power.requestOff({ delayMs: 1500, persist: false });
   controls.setTime(1);
   updateViewport();
   setTimeout(() => updateViewport(), 600);
@@ -1055,8 +1091,9 @@ export function createUI(ctx) {
       const t = now();
       dt = last ? clamp((t - last) / 1000, 0, 0.1) : 0;
       last = t;
-      // render-size budget: lower while the wallpaper plays (stage re-applies it on resize)
-      const budget = app.mode === 'wall' ? WALL_BUDGET_MP : FULL_BUDGET_MP;
+      // render-size budget: lower while the wallpaper plays (stage re-applies it on resize),
+      // full while the still for the power switch is taken
+      const budget = app.mode === 'wall' && power.state === 'on' ? WALL_BUDGET_MP : FULL_BUDGET_MP;
       if (stage.setPixelBudget && Math.abs((stage.pixelBudget || 0) - budget) > 0.01) stage.setPixelBudget(budget);
       if (show.active) show.update(dt);
       else {
@@ -1094,12 +1131,14 @@ export function createUI(ctx) {
 
     afterRender(state) {
       recorder.afterRender(state);
+      power.afterRender();
     },
 
     // Called by main.js on every animation frame, before anything else (also while the
     // watch box is open): minimum ms between rendered frames. Infinity = don't render
     // (Lively paused us, or the page is hidden).
     frameInterval() {
+      if (power.isOff) return Infinity;
       const t = now();
       syncBox();
       checkIdle(t);
@@ -1121,12 +1160,14 @@ export function createUI(ctx) {
       const changed = applyWatch(w || ctx.watch);
       if (changed) afterWatchChange();
       finishBoot();
+      if (changed) power.refresh(1500); // switched off: show the new watch in the still
     },
 
-    get paused() { return app.paused || document.hidden; },
+    // main.js renders nothing while this is true (Lively's pause, a hidden page, switched off)
+    get paused() { return app.paused || document.hidden || power.isOff; },
 
     // handy for debugging from the console (window.__watch.ui)
     app, rig, labels, show, theme, hud, setView, enterShow, exitShow, select, applyWallpaper,
-    goWall, wake, openBox, zoomStep,
+    goWall, wake, openBox, zoomStep, power, switchOff,
   };
 }

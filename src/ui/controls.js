@@ -22,6 +22,7 @@ export function createControls(deps) {
   for (const b of q('[data-time]')) b.addEventListener('click', () => deps.onTime(Number(b.dataset.time)));
   $('wall-btn')?.addEventListener('click', () => deps.onWallpaper());
   $('rec-btn')?.addEventListener('click', () => deps.onRecord());
+  $('power-btn')?.addEventListener('click', () => deps.onPower());
   boxBtn?.addEventListener('click', () => deps.onBox());
   $('zoom-in')?.addEventListener('click', () => deps.onZoom(1));
   $('zoom-out')?.addEventListener('click', () => deps.onZoom(-1));

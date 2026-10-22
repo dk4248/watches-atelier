@@ -325,6 +325,22 @@ kbd {
 .toast.on { opacity: 1; visibility: visible; transform: translate(-50%, 0); pointer-events: auto; transition: opacity .3s ease, transform .3s ease, visibility 0s; }
 .toast-link { color: var(--accent); font-family: var(--font-mono); font-size: 12px; word-break: break-all; }
 
+/* ---------- power off: a still of the last frame, nothing renders ---------- */
+.off { position: fixed; inset: 0; z-index: 3; background: linear-gradient(to bottom, var(--bg-top), var(--bg-bottom)); }
+.off-still { position: absolute; inset: 0; display: block; width: 100%; height: 100%; filter: brightness(.95) saturate(.9); }
+html.power-off .ui { display: none; }
+.on-btn {
+  appearance: none; position: absolute; right: calc(var(--side-r) + 2px); bottom: calc(14px + var(--pad-b));
+  display: inline-flex; align-items: center; gap: 7px; height: 28px; padding: 0 12px 0 10px; box-sizing: border-box;
+  border: 1px solid var(--rule-2); border-radius: 14px; background: var(--veil); color: var(--ink-2);
+  cursor: pointer; opacity: .5; transition: opacity .2s ease, color .2s ease, border-color .2s ease;
+}
+.on-btn:hover, .on-btn:focus-visible { opacity: 1; color: var(--ink); border-color: var(--ink-2); }
+.on-btn svg { display: block; flex: none; }
+.on-act { display: none; }
+.on-btn:hover .on-cap, .on-btn:focus-visible .on-cap { display: none; }
+.on-btn:hover .on-act, .on-btn:focus-visible .on-act { display: inline; }
+
 /* ---------- recorder ---------- */
 .modal {
   position: absolute; inset: 0; z-index: 5; display: flex; align-items: center; justify-content: center;
@@ -511,6 +527,9 @@ kbd {
         <button id="wall-btn" class="btn" type="button" title="Back to the wallpaper (Space)">Wallpaper</button>
         <button id="rec-btn" class="btn" type="button">Record video</button>
         <button id="help-btn" class="btn icon" type="button" aria-expanded="false" aria-controls="help" aria-label="Keyboard shortcuts and about">?</button>
+        <button id="power-btn" class="btn icon" type="button" title="Switch the wallpaper off: it freezes and stops using the GPU (P)" aria-label="Switch the wallpaper off">
+          <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path d="M5.2 3.4a5.6 5.6 0 1 0 5.6 0" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M8 1.4v6.2" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+        </button>
       </div>
     </div>
   </nav>
@@ -545,6 +564,7 @@ kbd {
       <dt><kbd>[</kbd> <kbd>]</kbd></dt><dd>Explode less / more</dd>
       <dt><kbd>+</kbd> <kbd>−</kbd> <kbd>R</kbd></dt><dd>Zoom in / out · reset the view</dd>
       <dt><kbd>Space</kbd></dt><dd>Wallpaper</dd>
+      <dt><kbd>P</kbd></dt><dd>Switch the wallpaper off / on (off: a still image, no GPU load)</dd>
       <dt><kbd>Esc</kbd></dt><dd>Close panel · back to the wallpaper</dd>
     </dl>
     <p class="tips">Drag to orbit; scroll, pinch or use + − to zoom. Click a part for details. Drag the crown sideways to wind. In wallpaper mode, click anywhere to explore — it goes back to the wallpaper by itself after a while.</p>
@@ -558,5 +578,12 @@ kbd {
   </div>
   <div id="hint" class="hint caps" role="status">Click anywhere to explore</div>
   <div id="toast" class="toast" role="status"></div>
+</div>
+<!-- power off: a still of the last frame covers the screen; nothing renders underneath -->
+<div id="off" class="off" hidden>
+  <button id="on-btn" class="on-btn caps" type="button" title="Switch the wallpaper on (P)" aria-label="Switch the wallpaper on">
+    <svg width="13" height="13" viewBox="0 0 16 16" aria-hidden="true"><path d="M5.2 3.4a5.6 5.6 0 1 0 5.6 0" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M8 1.4v6.2" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+    <span class="on-cap">Off</span><span class="on-act">Switch on</span>
+  </button>
 </div>
 <!--SCRIPT-->

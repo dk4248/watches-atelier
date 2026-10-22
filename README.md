@@ -111,6 +111,10 @@ the wallpaper starts: `https://dk4248.github.io/watches-atelier/wallpaper/`
 - **Watch box** (or `B`) opens the box. Click a watch to wear it today; the choice is remembered.
 - **Wind** turns the crown. On the automatics, turning the watch swings the rotor too.
 - After 2 minutes without input the page goes back to the wallpaper loop.
+- **⏻ switches the wallpaper off** (the button at the right end of the bottom bar, or `P`). It
+  freezes on a still image and stops rendering, so it uses no GPU and next to no CPU. The small
+  **Off** pill in the bottom-right corner (or `P`) switches it back on. It stays off after a
+  restart until you switch it on again.
 
 ### URL options
 
